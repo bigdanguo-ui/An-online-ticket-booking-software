@@ -1,1 +1,2 @@
-This is an online ticket booking software
+Git is a distributed version control system.
+Git is free software.
