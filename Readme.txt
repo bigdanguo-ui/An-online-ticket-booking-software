@@ -1,1 +1,1 @@
-This is an online ticket booking software
+Creating a new branch is quick.
