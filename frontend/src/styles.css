@@ -21,3 +21,17 @@ a { color:#8ab4ff; text-decoration:none; }
 .seat.selected { background:#1c6b3a; border-color:#2bdc7f; }
 .small { opacity:.85; font-size:13px; }
 hr { border:0; border-top:1px solid #1f2a55; margin:14px 0; }
+/* 隐藏横向滚动条但保留功能 */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* 推荐卡片悬停效果 */
+.movie-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}

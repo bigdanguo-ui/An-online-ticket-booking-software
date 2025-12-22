@@ -23,7 +23,7 @@ def _to_out(item: EventCategory) -> EventCategoryOut:
 
 
 @router.get("/event-categories", response_model=List[EventCategoryOut])
-def list_event_categories(kind: Literal["concert", "expo"] | None = None, sess: Session = Depends(db)):
+def list_event_categories(kind: Literal["concerts", "exhibitions"] | None = None, sess: Session = Depends(db)):
     stmt = select(EventCategory)
     if kind:
         stmt = stmt.where(EventCategory.kind == kind)

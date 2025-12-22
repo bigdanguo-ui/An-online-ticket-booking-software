@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+from sqlalchemy import Column, Integer, String, Text, Enum
+from .database import Base
 from datetime import datetime
 from typing import List
 
@@ -25,6 +26,7 @@ class Movie(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(200), index=True)
     description: Mapped[str] = mapped_column(String(2000), default="")
+    category = Column(String(50), nullable=True)
     duration_min: Mapped[int] = mapped_column(Integer, default=120)
     rating: Mapped[str] = mapped_column(String(20), default="PG-13")
     poster_url: Mapped[str] = mapped_column(String(500), default="")
@@ -137,3 +139,25 @@ class OrderSeat(Base):
     order: Mapped[Order] = relationship(back_populates="seats")
 
     __table_args__ = (UniqueConstraint("showtime_id", "seat_id", name="uq_sold_seat_once"),)
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # 核心字段：区分类型
+    kind = Column(String(20), index=True)  # 'movie', 'concert', 'exhibition'
+
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), nullable=True)
+    poster_url = Column(String(512), nullable=True)
+    status = Column(String(20), default="ON")  # ON, OFF
+
+    # --- 类型特有字段 (可以设为 nullable) ---
+    # 电影特有
+    duration_min = Column(Integer, nullable=True)
+    rating = Column(String(20), nullable=True) # PG-13 等
+
+    # 演唱会/漫展特有
+    venue = Column(String(255), nullable=True) # 场馆
+    price_info = Column(String(255), nullable=True) # 价格说明

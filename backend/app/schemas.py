@@ -1,9 +1,6 @@
 from __future__ import annotations
-
-from typing import List, Literal
-
 from pydantic import BaseModel, Field
-
+from typing import Optional, List, Literal
 
 class TokenOut(BaseModel):
     access_token: str
@@ -36,6 +33,8 @@ class MovieOut(BaseModel):
     rating: str
     poster_url: str
     status: str
+    # 建议这里也加上 category，以便旧接口也能返回
+    category: Optional[str] = None
 
 
 class EventCategoryOut(BaseModel):
@@ -103,8 +102,10 @@ class OrderOut(BaseModel):
     ticket_code: str = ""
 
 
+# --- 旧版 Admin Schema (为了兼容性补全 category) ---
 class AdminMovieIn(BaseModel):
     title: str
+    category: Optional[str] = None  # ✅ 补全
     description: str = ""
     duration_min: int = 120
     rating: str = "PG-13"
@@ -130,3 +131,45 @@ class AdminShowtimeIn(BaseModel):
     hall_id: int
     start_time: str  # ISO string
     price_cents: int = 4500
+
+
+# --- 新版 Event Schema (核心部分) ---
+
+class EventBase(BaseModel):
+    title: str
+    # ✅ 包含 category，用于 Create 操作
+    category: Optional[str] = None
+    description: Optional[str] = None
+    poster_url: Optional[str] = None
+    status: str = "ON"
+
+    # 包含所有可能的字段，但在不同类型下某些字段可能为 None
+    duration_min: Optional[int] = None
+    rating: Optional[str] = None
+    venue: Optional[str] = None
+    price_info: Optional[str] = None
+
+
+class EventCreate(EventBase):
+    pass
+
+
+# ✅ 修复 EventUpdate：确保包含 category 且所有字段可选
+class EventUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None  # 🔥 关键修复：必须包含此字段，修改才能生效
+    description: Optional[str] = None
+    poster_url: Optional[str] = None
+    status: Optional[str] = None
+    duration_min: Optional[int] = None
+    rating: Optional[str] = None
+    venue: Optional[str] = None
+    price_info: Optional[str] = None
+
+
+class EventOut(EventBase):
+    id: int
+    kind: str
+
+    class Config:
+        orm_mode = True
