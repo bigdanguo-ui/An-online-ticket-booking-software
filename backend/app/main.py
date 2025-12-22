@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .lifespan import lifespan
-from .routers import admin, auth, holds, movies, orders, seats
+from .routers import admin, auth, categories, holds, movies, orders, seats
 
 app = FastAPI(title="Movie Ticketing API", version="0.1.0", lifespan=lifespan)
 
@@ -16,6 +16,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(movies.router)
+app.include_router(categories.router)
 app.include_router(seats.router)
 app.include_router(holds.router)
 app.include_router(orders.router)

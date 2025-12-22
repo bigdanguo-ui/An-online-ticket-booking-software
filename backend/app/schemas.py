@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,26 @@ class MovieOut(BaseModel):
     rating: str
     poster_url: str
     status: str
+
+
+class EventCategoryOut(BaseModel):
+    id: int
+    kind: str
+    name: str
+    description: str
+    status: str
+
+
+class EventCategoryUpsertItem(BaseModel):
+    id: int | None = None
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    status: str = "ON"
+
+
+class EventCategoryUpsertIn(BaseModel):
+    kind: Literal["concert", "expo"]
+    items: List[EventCategoryUpsertItem]
 
 
 class ShowtimeOut(BaseModel):

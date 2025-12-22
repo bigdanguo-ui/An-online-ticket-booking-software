@@ -33,6 +33,17 @@ class Movie(Base):
     showtimes: Mapped[List["Showtime"]] = relationship(back_populates="movie")
 
 
+class EventCategory(Base):
+    __tablename__ = "event_categories"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), index=True)  # concert/expo
+    name: Mapped[str] = mapped_column(String(200), index=True)
+    description: Mapped[str] = mapped_column(String(2000), default="")
+    status: Mapped[str] = mapped_column(String(20), default="ON")  # ON/OFF
+
+    __table_args__ = (UniqueConstraint("kind", "name", name="uq_event_category_kind_name"),)
+
+
 class Cinema(Base):
     __tablename__ = "cinemas"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
