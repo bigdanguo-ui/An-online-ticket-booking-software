@@ -33,7 +33,7 @@ export default function Register({ onRegister }) {
                         className="input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="邮箱"
+                        placeholder="手机号/邮箱"
                     />
                     <input
                         className="input"

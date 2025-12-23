@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../api.js"; // 确保引入 api
+import { api } from "../api.js";
 
-export default function ConcertDetail() {
+export default function ConcertDetail({ me }) {
     const { id } = useParams();
-    const nav = useNavigate(); // 用于跳转到选座页
+    const nav = useNavigate();
+
     const [detail, setDetail] = useState(null);
-    const [showtimes, setShowtimes] = useState([]); // 存储从后端获取的场次列表
-    const [selectedShowtime, setSelectedShowtime] = useState(null); // 当前选中的场次
+    const [showtimes, setShowtimes] = useState([]);
+
+    // 新增：日期筛选状态
+    const [selectedDate, setSelectedDate] = useState("");
+    const [dates, setDates] = useState([]);
 
     useEffect(() => {
         async function load() {
@@ -19,7 +23,34 @@ export default function ConcertDetail() {
                 ]);
 
                 setDetail(resDetail.data);
-                setShowtimes(resShowtime.data);
+
+                const allShowtimes = resShowtime.data;
+                setShowtimes(allShowtimes);
+
+                // --- 核心逻辑：提取所有不重复的日期 ---
+                const uniqueDates = [];
+                const dateSet = new Set();
+
+                allShowtimes.forEach(st => {
+                    const d = new Date(st.start_time);
+                    const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+                    if (!dateSet.has(dateKey)) {
+                        dateSet.add(dateKey);
+                        uniqueDates.push({
+                            key: dateKey,
+                            label: `${d.getMonth() + 1}月${d.getDate()}日`,
+                            week: "周" + "日一二三四五六".charAt(d.getDay())
+                        });
+                    }
+                });
+
+                setDates(uniqueDates);
+                // 默认选中第一个日期
+                if (uniqueDates.length > 0) {
+                    setSelectedDate(uniqueDates[0].key);
+                }
+
             } catch (e) {
                 console.error("加载失败", e);
             }
@@ -27,15 +58,18 @@ export default function ConcertDetail() {
         load();
     }, [id]);
 
-    // 格式化时间的辅助函数
+    // 辅助函数：格式化时间 (HH:MM)
     const formatTime = (isoString) => {
-        const date = new Date(isoString);
-        return date.toLocaleString('zh-CN', {
-            month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-            weekday: 'short'
-        });
+        const d = new Date(isoString);
+        return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
     };
+
+    // 根据选中日期过滤场次
+    const filteredShowtimes = showtimes.filter(st => {
+        const d = new Date(st.start_time);
+        const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        return dateKey === selectedDate;
+    });
 
     if (!detail) {
         return (
@@ -45,93 +79,139 @@ export default function ConcertDetail() {
         );
     }
 
-    // 处理购票跳转
-    const handleBuy = () => {
-        if (!selectedShowtime) return;
-        // 跳转到选座页面，传入场次ID
-        nav(`/showtime/${selectedShowtime.id}/seats`);
-    };
+    const accentColor = "#a55eea"; // 演唱会主题色
 
     return (
-        <div className="page" style={{ "--accent": "#a55eea", maxWidth: 1000, margin: "20px auto" }}>
-            <div className="row" style={{display: "flex", gap: 30, flexWrap: "wrap"}}>
+        <div className="page" style={{ maxWidth: 1000, margin: "20px auto" }}>
+            <div className="row" style={{ alignItems: "flex-start", gap: 30 }}>
 
-                {/* 左侧海报 */}
-                <div style={{ flex: "0 0 300px", maxWidth: "100%" }}>
+                {/* --- 左侧海报与基础信息 --- */}
+                <div className="card" style={{ width: 300, flexShrink: 0, padding: 0, overflow: "hidden", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
                     <img
                         src={detail.poster_url || "https://via.placeholder.com/300x400?text=No+Image"}
                         alt={detail.title}
-                        style={{ width: "100%", borderRadius: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.12)", objectFit: "cover", aspectRatio: "2/3" }}
+                        style={{ width: "100%", aspectRatio: "2/3", objectFit: "cover", display: "block" }}
                     />
-                </div>
+                    <div style={{ padding: 20 }}>
+                        <h2 style={{ margin: "0 0 10px 0", fontSize: "1.4rem" }}>{detail.title}</h2>
 
-                {/* 右侧信息 */}
-                <div style={{ flex: 1, minWidth: 300 }}>
-                    <div className="card" style={{ height: "100%", padding: 30, display: "flex", flexDirection: "column" }}>
-                        <div>
-                            <span className="badge" style={{ backgroundColor: "var(--accent)", color: "#fff", marginBottom: 12 }}>演唱会</span>
-                            <h1 style={{ marginTop: 0, fontSize: "2rem" }}>{detail.title}</h1>
-
-                            {/* 描述与地点 */}
-                            <div className="small" style={{ margin: "10px 0 20px", lineHeight: 1.6, color: "#555", fontSize: "1rem" }}>
-                                {detail.venue && <div style={{marginBottom: 5}}>📍 地点：{detail.venue}</div>}
-                                {detail.description && <div style={{whiteSpace: "pre-wrap"}}>{detail.description}</div>}
-                            </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 15 }}>
+                            <span className="badge" style={{backgroundColor: accentColor, color: "#fff"}}>演唱会</span>
+                            {detail.category && <span className="badge" style={{backgroundColor: "#eee", color: "#666"}}>{detail.category}</span>}
                         </div>
 
-                        <hr style={{border: "none", borderTop: "1px solid #eee", margin: "20px 0"}} />
+                        {detail.venue && <div className="small" style={{marginBottom: 10, fontWeight: "bold"}}>📍 {detail.venue}</div>}
+                        <div className="small" style={{ lineHeight: 1.6, color: "#666", whiteSpace: "pre-wrap" }}>
+                            {detail.description}
+                        </div>
+                    </div>
+                </div>
 
-                        {/* 场次选择区域 */}
-                        <h3 style={{ marginBottom: 15 }}>选择场次与票档</h3>
+                {/* --- 右侧：场次选择 --- */}
+                <div style={{ flex: 1, minWidth: 320 }}>
 
-                        {showtimes.length === 0 ? (
-                            <div style={{color: "#999", padding: 20, textAlign: "center", background: "#f9f9f9", borderRadius: 8}}>
-                                暂无排期，敬请期待
-                            </div>
-                        ) : (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginBottom: 30 }}>
-                                {showtimes.map((st) => (
+                    {/* 1. 日期选择 Tab 栏 */}
+                    <div style={{ marginBottom: 20, borderBottom: "1px solid #eee", paddingBottom: 10 }}>
+                        <h3 style={{ marginBottom: 15 }}>选择演出场次</h3>
+                        {dates.length > 0 ? (
+                            <div className="hide-scrollbar" style={{ display: "flex", gap: 15, overflowX: "auto" }}>
+                                {dates.map((d) => (
                                     <button
-                                        key={st.id}
-                                        onClick={() => setSelectedShowtime(st)}
+                                        key={d.key}
+                                        onClick={() => setSelectedDate(d.key)}
                                         style={{
-                                            padding: "12px",
-                                            border: selectedShowtime?.id === st.id ? "2px solid var(--accent)" : "1px solid #ddd",
-                                            backgroundColor: selectedShowtime?.id === st.id ? "#f3e5f5" : "#fff",
-                                            color: selectedShowtime?.id === st.id ? "var(--accent)" : "#333",
-                                            borderRadius: 8,
+
+                                            background: selectedDate === d.key ? accentColor : "#fff",
+                                            color: selectedDate === d.key ? "#fff" : "#333",
+                                            padding: "8px 16px",
+                                            borderRadius: "20px",
                                             cursor: "pointer",
-                                            textAlign: "left",
-                                            transition: "all 0.2s"
+                                            fontSize: "0.95rem",
+                                            whiteSpace: "nowrap",
+                                            transition: "all 0.2s",
+                                            boxShadow: selectedDate === d.key ? `0 4px 10px rgba(165, 94, 234, 0.3)` : "none",
+                                            border: selectedDate === d.key ? "none" : "1px solid #ddd"
                                         }}
                                     >
-                                        <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>{formatTime(st.start_time)}</div>
-                                        <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>RMB¥ {st.price_cents}</div>
-                                        <div className="small" style={{opacity: 0.8}}>{st.hall_name}</div>
+                                        {d.label} {d.week}
                                     </button>
                                 ))}
                             </div>
+                        ) : (
+                            <div className="small" style={{color: "#999"}}>暂无排期</div>
                         )}
+                    </div>
 
-                        {/* 底部购买栏 */}
-                        <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", paddingTop: 20, borderTop: "1px dashed #eee" }}>
-                            <div style={{ fontSize: "1.4rem", fontWeight: 600, color: "var(--accent)" }}>
-                                {selectedShowtime ? `总计: RMB¥ ${selectedShowtime.price_cents}` : "请选择场次"}
-                            </div>
-                            <button
-                                className="btn"
-                                disabled={!selectedShowtime}
-                                onClick={handleBuy}
-                                style={{
-                                    opacity: selectedShowtime ? 1 : 0.5,
-                                    backgroundColor: "var(--accent)",
-                                    padding: "12px 36px",
-                                    fontSize: "1.1rem"
-                                }}
-                            >
-                                立即购票
-                            </button>
+                    {/* 未登录提示 */}
+                    {!me && (
+                        <div className="small" style={{
+                            backgroundColor: "#fff3cd", color: "#856404",
+                            padding: "10px 15px", borderRadius: 8, marginBottom: 15
+                        }}>
+                            💡 提示：您尚未登录，购票前请先 <b style={{cursor:"pointer", textDecoration:"underline"}} onClick={()=>nav("/login")}>登录</b>。
                         </div>
+                    )}
+
+                    {/* 2. 具体场次列表 */}
+                    <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
+                        {filteredShowtimes.map((st) => (
+                            <div key={st.id} className="card" style={{
+                                padding: "15px 20px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                transition: "transform 0.1s",
+                                borderLeft: `4px solid ${accentColor}`
+                            }}>
+                                {/* 时间与场馆信息 */}
+                                <div style={{ display: "flex", gap: 30, alignItems: "center", flex: 1 }}>
+                                    <div style={{ textAlign: "center", minWidth: 60 }}>
+                                        <div style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
+                                            {formatTime(st.start_time)}
+                                        </div>
+                                        <div className="small" style={{ color: "#999", fontSize: "0.8rem" }}>
+                                            开场
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ fontWeight: "bold" }}>{st.hall_name}</div>
+                                        <div className="small" style={{ color: "#666" }}>{st.cinema_name}</div>
+                                    </div>
+                                </div>
+
+                                {/* 价格与按钮 */}
+                                <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                                    <div style={{ color: accentColor, fontSize: "1.2rem", fontWeight: "bold" }}>
+                                        <span style={{ fontSize: "0.8rem" }}>RMB¥ </span>
+                                        {st.price_cents}
+                                        {/* 注意：演唱会票价一般直接存元，如果是分则 /100，根据你的后端数据调整 */}
+                                    </div>
+
+                                    <button
+                                        className="btn"
+                                        onClick={() => {
+                                            if (!me) return nav("/login");
+                                            nav(`/showtime/${st.id}/seats`);
+                                        }}
+                                        style={{
+                                            padding: "8px 24px",
+                                            borderRadius: 20,
+                                            backgroundColor: accentColor,
+                                            boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+                                        }}
+                                    >
+                                        立即购票
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {dates.length > 0 && filteredShowtimes.length === 0 && (
+                            <div style={{ textAlign: "center", padding: 40, color: "#999" }}>
+                                该日期暂无场次，请切换其他日期
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

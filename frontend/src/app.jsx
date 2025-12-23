@@ -12,6 +12,7 @@ import SeatSelect from "./pages/SeatSelect.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import Orders from "./pages/Orders.jsx";
 import Admin from "./pages/Admin.jsx";
+import Profile from "./pages/Profile.jsx";
 
 export default function App() {
     const nav = useNavigate();
@@ -72,7 +73,9 @@ export default function App() {
                     <div className="topbar-actions">
                         {me ? (
                             <>
+                            <Link to="/profile" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
                                 <span className="badge">Hi, {me.name}</span>
+                            </Link>
                                 <button
                                     className="btn btn-ghost"
                                     onClick={() => { clearToken(); setMe(null); nav("/login"); }}
@@ -87,6 +90,7 @@ export default function App() {
                             </>
                         )}
                     </div>
+
                 </div>
             </header>
 
@@ -109,6 +113,7 @@ export default function App() {
                     <Route path="/admin" element={<Admin me={me} />} />
                     <Route path="/login" element={<Login onLogin={loadMe} />} />
                     <Route path="/register" element={<Register onRegister={loadMe} />} />
+                    <Route path="/profile" element={me ? <Profile me={me} onUpdate={loadMe} /> : <Navigate to="/login" />} />
                 </Routes>
             </div>
         </div>

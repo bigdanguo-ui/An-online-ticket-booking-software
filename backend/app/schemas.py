@@ -12,6 +12,12 @@ class UserOut(BaseModel):
     email: str
     name: str
     is_admin: bool
+    avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool = True
+
+    class Config:
+        from_attributes= True
 
 
 class RegisterIn(BaseModel):
@@ -175,3 +181,10 @@ class EventOut(EventBase):
 
     class Config:
         from_attributes = True
+
+# ✅ 新增：用户更新资料的模型
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6)
+    avatar_url: Optional[str] = None
+    phone: Optional[str] = None

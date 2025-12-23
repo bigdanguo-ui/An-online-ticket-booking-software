@@ -17,8 +17,11 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(80), default="用户")
     hashed_password: Mapped[str] = mapped_column(String(255))
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    avatar_url: Mapped[str] = mapped_column(String(512), nullable=True) # 头像链接
+    phone: Mapped[str] = mapped_column(String(20), nullable=True)       # 联系方式
 
     orders: Mapped[List["Order"]] = relationship(back_populates="user")
+    is_active = Column(Boolean, default=True)
 
 
 class Movie(Base):
