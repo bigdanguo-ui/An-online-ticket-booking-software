@@ -1,38 +1,48 @@
-import os
-from fastapi import FastAPI
-from starlette.staticfiles import StaticFiles
+from pathlib import Path
 
-from .routers import events, categories, uploading  # ...其他路由
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 
 from .lifespan import lifespan
-from .routers import admin, auth, categories, holds, movies, orders, seats
+from .routers import admin, auth, categories, events, holds, orders, seats, uploading
 
-app = FastAPI(title="Movie Ticketing API", version="0.1.0", lifespan=lifespan)
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+UPLOAD_DIR = STATIC_DIR / "uploads"
 
-UPLOAD_DIR = "static/uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-# 2. 挂载静态文件服务
-# 这样访问 /static/uploads/abc.jpg 就能看到图片
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+ROUTERS = (
+    auth.router,
+    categories.router,
+    seats.router,
+    holds.router,
+    orders.router,
+    admin.router,
+    events.router,
+    uploading.router,
 )
 
-app.include_router(auth.router)
-#app.include_router(movies.router)
-app.include_router(categories.router)
-app.include_router(seats.router)
-app.include_router(holds.router)
-app.include_router(orders.router)
-app.include_router(admin.router)
-app.include_router(events.router)
-app.include_router(uploading.router)
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Movie Ticketing API", version="0.1.0", lifespan=lifespan)
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    for router in ROUTERS:
+        app.include_router(router)
+
+    return app
+
+
+app = create_app()

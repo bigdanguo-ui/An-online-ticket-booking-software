@@ -5,4 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.126.0",
+    "passlib>=1.7.4",
+    "python-jose>=3.5.0",
+    "sqlalchemy>=2.0.45",
 ]

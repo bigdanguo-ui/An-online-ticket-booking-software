@@ -58,44 +58,46 @@ export default function SeatSelect({ me }) {
     }
 
     return (
-        <div className="card">
-            <h2>选座</h2>
-            <div className="small" style={{marginBottom:10}}>
-                绿色=你选中；红色=已售；黄色=他人锁座；深蓝=可选。系统会自动刷新座位状态。
-            </div>
+        <div className="page">
+            <div className="card">
+                <h2>选座</h2>
+                <div className="small" style={{marginBottom:10}}>
+                    绿色=你选中；红色=已售；黄色=他人锁座；深蓝=可选。系统会自动刷新座位状态。
+                </div>
 
-            <div className="grid" style={{gridTemplateColumns:"1fr", gap:10}}>
-                {byRow.map(([row, arr]) => (
-                    <div key={row} style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                        <div className="badge" style={{minWidth:42, textAlign:"center"}}>{String.fromCharCode(65+row)}</div>
-                        {arr.map(s => {
-                            const isSel = selected.has(s.seat_id);
-                            const cls =
-                                s.state === "SOLD" ? "sold" :
-                                    s.state === "HELD" ? "held" :
-                                        isSel ? "selected" : "available";
-                            return (
-                                <div
-                                    key={s.seat_id}
-                                    className={`seat ${cls}`}
-                                    onClick={() => toggleSeat(s)}
-                                    title={s.label}
-                                >
-                                    {s.col+1}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ))}
-            </div>
+                <div className="grid" style={{gridTemplateColumns:"1fr", gap:10}}>
+                    {byRow.map(([row, arr]) => (
+                        <div key={row} style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                            <div className="badge" style={{minWidth:42, textAlign:"center"}}>{String.fromCharCode(65+row)}</div>
+                            {arr.map(s => {
+                                const isSel = selected.has(s.seat_id);
+                                const cls =
+                                    s.state === "SOLD" ? "sold" :
+                                        s.state === "HELD" ? "held" :
+                                            isSel ? "selected" : "available";
+                                return (
+                                    <div
+                                        key={s.seat_id}
+                                        className={`seat ${cls}`}
+                                        onClick={() => toggleSeat(s)}
+                                        title={s.label}
+                                    >
+                                        {s.col+1}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
 
-            <hr />
-            <div className="row" style={{alignItems:"center"}}>
-                <div className="small">已选：{[...selected].length} 个座位</div>
-                <button className="btn" onClick={hold} disabled={selected.size===0}>锁座并去结算</button>
-                <button className="btn" onClick={() => { setSelected(new Set()); setErr(""); }}>清空</button>
+                <hr />
+                <div className="row" style={{alignItems:"center"}}>
+                    <div className="small">已选：{[...selected].length} 个座位</div>
+                    <button className="btn" onClick={hold} disabled={selected.size===0}>锁座并去结算</button>
+                    <button className="btn btn-ghost" onClick={() => { setSelected(new Set()); setErr(""); }}>清空</button>
+                </div>
+                {err && <div className="small text-danger" style={{ marginTop:10 }}>{err}</div>}
             </div>
-            {err && <div className="small" style={{color:"#ff9aa2", marginTop:10}}>{err}</div>}
         </div>
     );
 }
