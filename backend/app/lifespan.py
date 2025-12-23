@@ -607,7 +607,8 @@ def _seed_showtimes(sess: Session, movies: list[Movie]):
             for hour in hours:
                 sess.add(
                     Showtime(
-                        movie_id=movie.id,
+                        target_id=movie.id,
+                        event_kind="movie",
                         hall_id=hall.id,
                         start_time=base + timedelta(days=d, hours=hour),
                         price_cents=price_cents,

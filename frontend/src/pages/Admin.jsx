@@ -169,22 +169,25 @@ export default function Admin({ me }) {
     async function createShowtime() {
         setMsg("");
         try {
-            // 这里假设后端场次接口统一，或者你需要根据 activeTab 发送不同请求
-            // 假设目前只有 movies 需要具体场次，或者后端做了统一处理
-            const endpoint = activeTab === 'movie' ? '/admin/showtimes' : `/admin/${activeTab}s/sessions`;
-
-            // 为适应之前的后端逻辑，如果是电影依然发 movie_id
             const payload = {
-                ...showtime,
+                // 1. 传入通用 ID
+                target_id: Number(showtime.target_id),
+
+                // 2. 🔥 传入当前激活的类别 (movie/concert/exhibition)
+                event_kind: activeTab,
+
+                hall_id: Number(showtime.hall_id),
+                price_cents: Number(showtime.price_cents),
                 start_time: new Date(showtime.start_time).toISOString()
             };
-            if (activeTab === 'movie') payload.movie_id = showtime.target_id;
-            else payload.target_id = showtime.target_id; // 后端可能需要适配
 
-            const r = await api.post(endpoint, payload);
-            setMsg(`已创建排期/场次：ID=${r.data.id}`);
+            // 注意：因为后端 Schema 改了，不要再传 movie_id 了
+
+            const r = await api.post('/admin/showtimes', payload);
+            setMsg(`[${activeTab}] ID ${showtime.target_id} 的场次创建成功`);
         } catch (e) {
-            setMsg("创建场次失败：" + (e?.response?.data?.detail || "请检查后端是否支持"));
+            console.error(e);
+            setMsg("场次创建失败：" + (e?.response?.data?.detail || e.message));
         }
     }
 

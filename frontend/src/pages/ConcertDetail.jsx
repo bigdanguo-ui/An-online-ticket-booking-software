@@ -1,86 +1,133 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { api } from "../api.js"; // 确保引入 api
 
 export default function ConcertDetail() {
     const { id } = useParams();
+    const nav = useNavigate(); // 用于跳转到选座页
     const [detail, setDetail] = useState(null);
-    const [selectedPrice, setSelectedPrice] = useState(null);
+    const [showtimes, setShowtimes] = useState([]); // 存储从后端获取的场次列表
+    const [selectedShowtime, setSelectedShowtime] = useState(null); // 当前选中的场次
 
     useEffect(() => {
         async function load() {
             try {
-                setDetail({
-                    id,
-                    title: "周杰伦 2025 嘉年华世界巡回演唱会",
-                    poster_url: "https://via.placeholder.com/300x400?text=Concert",
-                    venue: "台北大巨蛋",
-                    time: "2025-05-20 19:30",
-                    prices: [
-                        { id: 1, label: "看台区", price: 1800 },
-                        { id: 2, label: "摇滚区", price: 3800 },
-                        { id: 3, label: "VIP区", price: 5800 },
-                    ]
-                });
+                // 并行请求：同时获取详情和场次表
+                const [resDetail, resShowtime] = await Promise.all([
+                    api.get(`/concerts/${id}`),
+                    api.get(`/concerts/${id}/showtimes`)
+                ]);
+
+                setDetail(resDetail.data);
+                setShowtimes(resShowtime.data);
             } catch (e) {
-                console.error(e);
+                console.error("加载失败", e);
             }
         }
         load();
     }, [id]);
 
+    // 格式化时间的辅助函数
+    const formatTime = (isoString) => {
+        const date = new Date(isoString);
+        return date.toLocaleString('zh-CN', {
+            month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+            weekday: 'short'
+        });
+    };
+
     if (!detail) {
         return (
-            <div className="page">
+            <div className="page" style={{padding: 20}}>
                 <div className="card">加载中...</div>
             </div>
         );
     }
 
+    // 处理购票跳转
+    const handleBuy = () => {
+        if (!selectedShowtime) return;
+        // 跳转到选座页面，传入场次ID
+        nav(`/showtime/${selectedShowtime.id}/seats`);
+    };
+
     return (
-        <div className="page" style={{ "--accent": "#7a5640" }}>
-            <div className="row">
-                <div style={{ flex: "0 0 300px" }}>
+        <div className="page" style={{ "--accent": "#a55eea", maxWidth: 1000, margin: "20px auto" }}>
+            <div className="row" style={{display: "flex", gap: 30, flexWrap: "wrap"}}>
+
+                {/* 左侧海报 */}
+                <div style={{ flex: "0 0 300px", maxWidth: "100%" }}>
                     <img
-                        src={detail.poster_url}
+                        src={detail.poster_url || "https://via.placeholder.com/300x400?text=No+Image"}
                         alt={detail.title}
-                        style={{ width: "100%", borderRadius: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.12)" }}
+                        style={{ width: "100%", borderRadius: 12, boxShadow: "0 10px 24px rgba(0,0,0,0.12)", objectFit: "cover", aspectRatio: "2/3" }}
                     />
                 </div>
 
+                {/* 右侧信息 */}
                 <div style={{ flex: 1, minWidth: 300 }}>
-                    <div className="card" style={{ height: "100%" }}>
-                        <span className="badge badge-solid" style={{ marginBottom: 12 }}>演唱会</span>
-                        <h1 style={{ marginTop: 0 }}>{detail.title}</h1>
-                        <div className="small" style={{ margin: "10px 0 20px", lineHeight: 1.6 }}>
-                            <div>地点：{detail.venue}</div>
-                            <div>时间：{detail.time}</div>
+                    <div className="card" style={{ height: "100%", padding: 30, display: "flex", flexDirection: "column" }}>
+                        <div>
+                            <span className="badge" style={{ backgroundColor: "var(--accent)", color: "#fff", marginBottom: 12 }}>演唱会</span>
+                            <h1 style={{ marginTop: 0, fontSize: "2rem" }}>{detail.title}</h1>
+
+                            {/* 描述与地点 */}
+                            <div className="small" style={{ margin: "10px 0 20px", lineHeight: 1.6, color: "#555", fontSize: "1rem" }}>
+                                {detail.venue && <div style={{marginBottom: 5}}>📍 地点：{detail.venue}</div>}
+                                {detail.description && <div style={{whiteSpace: "pre-wrap"}}>{detail.description}</div>}
+                            </div>
                         </div>
 
-                        <hr />
+                        <hr style={{border: "none", borderTop: "1px solid #eee", margin: "20px 0"}} />
 
-                        <h3 style={{ marginBottom: 12 }}>选择票档</h3>
-                        <div className="price-options">
-                            {detail.prices.map((p) => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => setSelectedPrice(p)}
-                                    className={`price-option ${selectedPrice?.id === p.id ? "is-active" : ""}`}
-                                >
-                                    <div>{p.label}</div>
-                                    <div style={{ fontWeight: 600 }}>NT$ {p.price}</div>
-                                </button>
-                            ))}
-                        </div>
+                        {/* 场次选择区域 */}
+                        <h3 style={{ marginBottom: 15 }}>选择场次与票档</h3>
 
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                        {showtimes.length === 0 ? (
+                            <div style={{color: "#999", padding: 20, textAlign: "center", background: "#f9f9f9", borderRadius: 8}}>
+                                暂无排期，敬请期待
+                            </div>
+                        ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginBottom: 30 }}>
+                                {showtimes.map((st) => (
+                                    <button
+                                        key={st.id}
+                                        onClick={() => setSelectedShowtime(st)}
+                                        style={{
+                                            padding: "12px",
+                                            border: selectedShowtime?.id === st.id ? "2px solid var(--accent)" : "1px solid #ddd",
+                                            backgroundColor: selectedShowtime?.id === st.id ? "#f3e5f5" : "#fff",
+                                            color: selectedShowtime?.id === st.id ? "var(--accent)" : "#333",
+                                            borderRadius: 8,
+                                            cursor: "pointer",
+                                            textAlign: "left",
+                                            transition: "all 0.2s"
+                                        }}
+                                    >
+                                        <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>{formatTime(st.start_time)}</div>
+                                        <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>NT$ {st.price_cents / 100}</div>
+                                        <div className="small" style={{opacity: 0.8}}>{st.hall_name}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* 底部购买栏 */}
+                        <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", paddingTop: 20, borderTop: "1px dashed #eee" }}>
                             <div style={{ fontSize: "1.4rem", fontWeight: 600, color: "var(--accent)" }}>
-                                {selectedPrice ? `总计: NT$ ${selectedPrice.price}` : "请选择票档"}
+                                {selectedShowtime ? `总计: NT$ ${selectedShowtime.price_cents / 100}` : "请选择场次"}
                             </div>
                             <button
                                 className="btn"
-                                disabled={!selectedPrice}
-                                onClick={() => alert(`购买成功！\n项目：${detail.title}\n票档：${selectedPrice.label}`)}
-                                style={{ opacity: selectedPrice ? 1 : 0.5 }}
+                                disabled={!selectedShowtime}
+                                onClick={handleBuy}
+                                style={{
+                                    opacity: selectedShowtime ? 1 : 0.5,
+                                    backgroundColor: "var(--accent)",
+                                    padding: "12px 36px",
+                                    fontSize: "1.1rem"
+                                }}
                             >
                                 立即购票
                             </button>

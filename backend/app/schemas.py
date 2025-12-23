@@ -59,7 +59,8 @@ class EventCategoryUpsertIn(BaseModel):
 
 class ShowtimeOut(BaseModel):
     id: int
-    movie_id: int
+    target_id: int
+    event_kind: str
     hall_id: int
     start_time: str
     price_cents: int
@@ -127,7 +128,8 @@ class AdminHallIn(BaseModel):
 
 
 class AdminShowtimeIn(BaseModel):
-    movie_id: int
+    target_id: int
+    event_kind: str
     hall_id: int
     start_time: str  # ISO string
     price_cents: int = 4500

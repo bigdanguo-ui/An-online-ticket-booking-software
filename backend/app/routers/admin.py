@@ -44,7 +44,7 @@ def admin_create_hall(body: AdminHallIn, sess: Session = Depends(db), _: User = 
 def admin_create_showtime(body: AdminShowtimeIn, sess: Session = Depends(db), _: User = Depends(admin_user)):
     # 允许前端传 Z 或 +09:00 等，统一落库为 naive UTC
     start = parse_iso_to_utc_naive(body.start_time)
-    st = Showtime(movie_id=body.movie_id, hall_id=body.hall_id, start_time=start, price_cents=body.price_cents)
+    st = Showtime(target_id=body.target_id,event_kind=body.event_kind, hall_id=body.hall_id, start_time=start, price_cents=body.price_cents)
     sess.add(st)
     sess.commit()
     return {"id": st.id}

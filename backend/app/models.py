@@ -32,7 +32,7 @@ class Movie(Base):
     poster_url: Mapped[str] = mapped_column(String(500), default="")
     status: Mapped[str] = mapped_column(String(20), default="ON")  # ON/OFF
 
-    showtimes: Mapped[List["Showtime"]] = relationship(back_populates="movie")
+    #showtimes: Mapped[List["Showtime"]] = relationship(back_populates="movie")
 
 
 class EventCategory(Base):
@@ -85,12 +85,13 @@ class Seat(Base):
 class Showtime(Base):
     __tablename__ = "showtimes"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), index=True)
+    target_id: Mapped[int] = mapped_column(Integer, index=True)
+    event_kind: Mapped[str] = mapped_column(String(20), index=True)
     hall_id: Mapped[int] = mapped_column(ForeignKey("halls.id"), index=True)
     start_time: Mapped[datetime] = mapped_column(DateTime, index=True)  # naive UTC
     price_cents: Mapped[int] = mapped_column(Integer, default=4500)
 
-    movie: Mapped[Movie] = relationship(back_populates="showtimes")
+    #movie: Mapped[Movie] = relationship(back_populates="showtimes")
     hall: Mapped[Hall] = relationship(back_populates="showtimes")
 
 

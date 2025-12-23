@@ -9,7 +9,7 @@ from ..database import db
 # 注意：这里假设 Showtime 模型中有一个 event_id 字段来关联 Event 表
 # 如果你的数据库还在用 movie_id，请将下文的 Showtime.event_id 改为 Showtime.movie_id
 from ..models import Event, User, Showtime, Hall, Cinema, Movie
-from ..schemas import EventOut, EventCreate, EventUpdate, ShowtimeOut
+from ..schemas import EventOut, EventCreate, EventUpdate, ShowtimeOut, AdminShowtimeIn
 from ..security import admin_user
 from ..time_utils import iso_utc_z # 确保你有这个工具函数，如果没有请手动处理时间
 
@@ -38,7 +38,7 @@ def get_event_by_id(kind: str, id: int, sess: Session):
         raise HTTPException(404, f"{kind} not found")
     return item
 
-def get_event_showtimes(id: int, sess: Session):
+def get_event_showtimes(id: int, sess: Session, kind: str):
     """查询事件关联的场次 (关联 Hall 和 Cinema)"""
     stmt = (
         select(Showtime, Hall, Cinema)
@@ -47,7 +47,8 @@ def get_event_showtimes(id: int, sess: Session):
         # 🔥 注意：这里假设 Showtime 表里有一个 event_id 字段关联 Event 表
         # 如果你的数据库 Showtime 表里还是 movie_id，请改为: .where(Showtime.movie_id == id)
         # 或者为了兼容性，确保 models.py 里 Showtime 定义了正确的 ForeignKey
-        .where(Showtime.movie_id == id)
+        .where(Showtime.target_id == id)
+        .where(Showtime.event_kind == kind)
         .order_by(Showtime.start_time.asc())
     )
     rows = sess.execute(stmt).all()
@@ -57,7 +58,8 @@ def get_event_showtimes(id: int, sess: Session):
             ShowtimeOut(
                 id=st.id,
                 # 统一返回 event_id，Schema 中可能叫 movie_id，需注意兼容
-                movie_id=st.event_id,
+                target_id=st.target_id,
+                event_kind=st.event_kind,
                 hall_id=st.hall_id,
                 start_time=iso_utc_z(st.start_time),
                 price_cents=st.price_cents,
@@ -146,14 +148,15 @@ def movie_showtimes(id: int, sess: Session = Depends(db)):
         select(Showtime, Hall, Cinema)
         .join(Hall, Showtime.hall_id == Hall.id)
         .join(Cinema, Hall.cinema_id == Cinema.id)
-        .where(Showtime.movie_id == id) # 电影表使用 movie_id 关联
+        .where(Showtime.target_id == id) # 电影表使用 movie_id 关联
+        .where(Showtime.event_kind == "movie")
         .order_by(Showtime.start_time.asc())
     )
     rows = sess.execute(stmt).all()
     out = []
     for st, hall, cinema in rows:
         out.append(ShowtimeOut(
-            id=st.id, movie_id=st.movie_id, hall_id=st.hall_id,
+            id=st.id, target_id=st.target_id,event_kind=st.event_kind, hall_id=st.hall_id,
             start_time=iso_utc_z(st.start_time), price_cents=st.price_cents,
             hall_name=hall.name, cinema_name=cinema.name
         ))
@@ -233,7 +236,7 @@ def get_concert(id: int, sess: Session = Depends(db)):
 
 @router.get("/concerts/{id}/showtimes", response_model=List[ShowtimeOut])
 def concert_showtimes(id: int, sess: Session = Depends(db)):
-    return get_event_showtimes(id, sess)
+    return get_event_showtimes(id, sess, kind="concert")
 
 @router.post("/admin/concerts", response_model=EventOut)
 def create_concert(body: EventCreate, sess: Session = Depends(db), _: User = Depends(admin_user)):
@@ -262,7 +265,7 @@ def get_exhibition(id: int, sess: Session = Depends(db)):
 
 @router.get("/exhibitions/{id}/showtimes", response_model=List[ShowtimeOut])
 def exhibition_showtimes(id: int, sess: Session = Depends(db)):
-    return get_event_showtimes(id, sess)
+    return get_event_showtimes(id, sess, kind="exhibition")
 
 @router.post("/admin/exhibitions", response_model=EventOut)
 def create_exhibition(body: EventCreate, sess: Session = Depends(db), _: User = Depends(admin_user)):
@@ -275,3 +278,49 @@ def update_exhibition(id: int, body: EventUpdate, sess: Session = Depends(db), _
 @router.delete("/admin/exhibitions/{id}")
 def delete_exhibition(id: int, sess: Session = Depends(db), _: User = Depends(admin_user)):
     return delete_event_logic(id, sess)
+
+@router.post("/admin/showtimes", response_model=ShowtimeOut)
+def create_showtime(
+        body: AdminShowtimeIn,
+        sess: Session = Depends(db),
+        _: User = Depends(admin_user)
+):
+    """
+    通用场次创建接口
+    必须接收 target_id 和 event_kind 才能唯一确定归属
+    """
+    st = Showtime(
+        target_id=body.target_id,   # ✅ 存入通用 ID
+        event_kind=body.event_kind, # ✅ 存入类型
+        hall_id=body.hall_id,
+        start_time=body.start_time,
+        price_cents=body.price_cents
+    )
+
+    sess.add(st)
+    sess.commit()
+    sess.refresh(st)
+
+    stmt = (
+        select(Showtime, Hall, Cinema)
+        .join(Hall, Showtime.hall_id == Hall.id)
+        .join(Cinema, Hall.cinema_id == Cinema.id)
+        .where(Showtime.id == st.id)
+    )
+    row = sess.execute(stmt).first()
+
+    if not row:
+        raise HTTPException(500, "创建后无法读取场次信息")
+
+    created_st, hall, cinema = row
+
+    return ShowtimeOut(
+        id=created_st.id,
+        target_id=created_st.target_id,
+        event_kind=created_st.event_kind,
+        hall_id=created_st.hall_id,
+        start_time=iso_utc_z(created_st.start_time),
+        price_cents=created_st.price_cents,
+        hall_name=hall.name,
+        cinema_name=cinema.name,
+    )
