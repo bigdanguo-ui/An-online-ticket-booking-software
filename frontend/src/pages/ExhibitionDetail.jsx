@@ -106,7 +106,7 @@ export default function ExhibitionDetail() {
                                     >
                                         <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>{formatTime(st.start_time)}</div>
                                         {/* 后端金额通常是分，需除以100 */}
-                                        <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>NT$ {st.price_cents / 100}</div>
+                                        <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>RMB¥ {st.price_cents}</div>
                                         <div className="small" style={{opacity: 0.8}}>{st.hall_name}</div>
                                     </button>
                                 ))}
@@ -116,7 +116,7 @@ export default function ExhibitionDetail() {
                         {/* 底部操作栏 */}
                         <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", paddingTop: 20, borderTop: "1px dashed #eee" }}>
                             <div style={{ fontSize: "1.4rem", fontWeight: 600, color: "var(--accent)" }}>
-                                {selectedShowtime ? `总计: NT$ ${selectedShowtime.price_cents / 100}` : "请选择票种"}
+                                {selectedShowtime ? `总计: RMB¥ ${selectedShowtime.price_cents}` : "请选择票种"}
                             </div>
                             <button
                                 className="btn"
